@@ -1,0 +1,6 @@
+{
+  "appId": "com.babygame.app",
+  "appName": "Baby Game",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
