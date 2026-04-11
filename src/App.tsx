@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Star, Smile } from 'lucide-react';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 // --- Constants & Types ---
 
@@ -36,60 +37,24 @@ interface TileData {
 // --- Audio Utility ---
 
 class BabyTTS {
-  private voice: SpeechSynthesisVoice | null = null;
-  private unlocked = false;
-
-  constructor() {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      this.loadVoices();
-      window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
-    }
-  }
-
-  private loadVoices() {
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoices = ['Samantha', 'Victoria', 'Karen', 'Zira', 'Google UK English Female', 'Google US English'];
-    
-    this.voice = voices.find(v => preferredVoices.some(name => v.name.includes(name))) 
-              || voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
-              || voices.find(v => v.lang.startsWith('en')) 
-              || voices[0] || null;
-  }
-
   unlock() {
-    if (this.unlocked || !window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance('');
-    utterance.volume = 0;
-    window.speechSynthesis.speak(utterance);
-    this.unlocked = true;
+    // Capacitor TTS handles initialization natively, but we do a silent speak for the web fallback
+    TextToSpeech.speak({ text: '', volume: 0 }).catch(() => {});
   }
 
-  speak(text: string) {
-    if (!window.speechSynthesis) return;
-    
-    // Don't cancel immediately on mobile, it can break the queue. 
-    // Only cancel if it's currently speaking.
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-    }
-    
-    // Convert to lowercase to prevent some engines from saying "Capital"
+  async speak(text: string) {
     const spokenText = SPOKEN_WORDS[text] || text.toLowerCase();
-    const utterance = new SpeechSynthesisUtterance(spokenText);
     
-    if (this.voice) {
-      utterance.voice = this.voice;
+    try {
+      await TextToSpeech.speak({
+        text: spokenText,
+        rate: 1.0,
+        pitch: 1.5,
+        volume: 1.0,
+      });
+    } catch (e) {
+      console.error("TTS Error:", e);
     }
-    
-    // Make it sound friendly and sharp (higher pitch, slightly faster)
-    utterance.pitch = 1.5;
-    utterance.rate = 1.0;
-    utterance.volume = 1;
-    
-    // Slight delay ensures the previous cancel() has time to process on mobile
-    setTimeout(() => {
-      window.speechSynthesis.speak(utterance);
-    }, 50);
   }
 }
 
