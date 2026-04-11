@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Star, Smile } from 'lucide-react';
@@ -37,6 +37,7 @@ interface TileData {
 
 class BabyTTS {
   private voice: SpeechSynthesisVoice | null = null;
+  private unlocked = false;
 
   constructor() {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -55,11 +56,22 @@ class BabyTTS {
               || voices[0] || null;
   }
 
+  unlock() {
+    if (this.unlocked || !window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance('');
+    utterance.volume = 0;
+    window.speechSynthesis.speak(utterance);
+    this.unlocked = true;
+  }
+
   speak(text: string) {
     if (!window.speechSynthesis) return;
     
-    // Cancel any ongoing speech so it doesn't queue up too much
-    window.speechSynthesis.cancel();
+    // Don't cancel immediately on mobile, it can break the queue. 
+    // Only cancel if it's currently speaking.
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
     
     // Convert to lowercase to prevent some engines from saying "Capital"
     const spokenText = SPOKEN_WORDS[text] || text.toLowerCase();
@@ -72,8 +84,12 @@ class BabyTTS {
     // Make it sound friendly and sharp (higher pitch, slightly faster)
     utterance.pitch = 1.5;
     utterance.rate = 1.0;
+    utterance.volume = 1;
     
-    window.speechSynthesis.speak(utterance);
+    // Slight delay ensures the previous cancel() has time to process on mobile
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   }
 }
 
@@ -92,6 +108,23 @@ export default function App() {
   const nextIdRef = useRef<number>(0);
   const gapRef = useRef<number>(150);
   const hueRef = useRef<number>(Math.random() * 360);
+  const clickedTilesRef = useRef<Set<number>>(new Set());
+
+  const handleStart = useCallback(() => {
+    if (isStarted) return;
+    tts.unlock();
+    setIsStarted(true);
+  }, [isStarted]);
+
+  useEffect(() => {
+    const unlockAudio = () => tts.unlock();
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+    };
+  }, []);
 
   const spawnTile = useCallback(() => {
     const lane = Math.floor(Math.random() * 4);
@@ -161,6 +194,9 @@ export default function App() {
   }, [isStarted, spawnTile]);
 
   const handleTileClick = useCallback((id: number, lane: number, color: string, content: string, wasStuck: boolean) => {
+    if (clickedTilesRef.current.has(id)) return;
+    clickedTilesRef.current.add(id);
+
     // Speak the text
     tts.speak(content);
 
@@ -186,21 +222,45 @@ export default function App() {
     setTiles(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const checkPoint = useCallback((x: number, y: number) => {
+    const element = document.elementFromPoint(x, y);
+    if (!element) return;
+    
+    const button = element.closest('button[data-tile-id]');
+    if (button) {
+      const id = parseInt(button.getAttribute('data-tile-id') || '0', 10);
+      const lane = parseInt(button.getAttribute('data-tile-lane') || '0', 10);
+      const color = button.getAttribute('data-tile-color') || '';
+      const content = button.getAttribute('data-tile-content') || '';
+      const isStuck = button.getAttribute('data-tile-stuck') === 'true';
+      
+      handleTileClick(id, lane, color, content, isStuck);
+    }
+  }, [handleTileClick]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent | React.PointerEvent) => {
+    if ('touches' in e) {
+      for (let i = 0; i < e.touches.length; i++) {
+        checkPoint(e.touches[i].clientX, e.touches[i].clientY);
+      }
+    } else {
+      checkPoint((e as React.PointerEvent).clientX, (e as React.PointerEvent).clientY);
+    }
+  }, [checkPoint]);
+
   if (!isStarted) {
     return (
-      <div className="fixed inset-0 bg-white flex items-center justify-center p-8 text-center">
+      <div className="fixed inset-0 bg-indigo-950 flex items-center justify-center p-8 text-center overflow-hidden">
+        {/* Background Glows */}
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-purple-600/30 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-600/30 rounded-full blur-[120px] pointer-events-none" />
+        
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => {
-            if (window.speechSynthesis) {
-              const u = new SpeechSynthesisUtterance('');
-              u.volume = 0;
-              window.speechSynthesis.speak(u);
-            }
-            setIsStarted(true);
-          }}
-          className="bg-yellow-400 text-white rounded-full w-64 h-64 flex flex-col items-center justify-center shadow-2xl border-8 border-yellow-200"
+          onPointerDown={handleStart}
+          onPointerEnter={handleStart}
+          className="relative bg-yellow-400 text-white rounded-full w-64 h-64 flex flex-col items-center justify-center shadow-2xl border-8 border-yellow-200 z-10 before:absolute before:-inset-16 before:content-['']"
         >
           <Smile size={80} className="mb-4" />
           <span className="text-4xl font-black uppercase tracking-tighter">Play!</span>
@@ -210,7 +270,11 @@ export default function App() {
   }
 
   return (
-    <div className="fixed inset-0 bg-indigo-950 flex justify-center overflow-hidden select-none touch-none">
+    <div 
+      className="fixed inset-0 bg-indigo-950 flex justify-center overflow-hidden select-none touch-none"
+      onTouchMove={handleTouchMove}
+      onPointerMove={handleTouchMove}
+    >
       {/* Background Glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
@@ -224,17 +288,39 @@ export default function App() {
           ))}
         </div>
 
+        {/* Reinforcement Popups (Background, Translucent, Top) */}
+        <AnimatePresence>
+          {score > 0 && score % 10 === 0 && (
+            <motion.div
+              initial={{ scale: 0, y: -50, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="absolute top-24 left-0 right-0 flex items-center justify-center z-0 pointer-events-none"
+            >
+              <div className="bg-white/20 backdrop-blur-md p-6 rounded-[3rem] shadow-xl border-4 border-white/30 flex flex-col items-center pointer-events-none">
+                <Smile size={80} className="text-green-300 drop-shadow-md mb-2" />
+                <h2 className="text-5xl font-black text-white uppercase drop-shadow-md">Great!</h2>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Tiles */}
         <div className="absolute inset-0">
           {tiles.map(tile => {
             return (
               <motion.button
                 key={tile.id}
+                data-tile-id={tile.id}
+                data-tile-lane={tile.lane}
+                data-tile-color={tile.color}
+                data-tile-content={tile.content}
+                data-tile-stuck={tile.isStuck}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: tile.isStuck ? 1.05 : 1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => handleTileClick(tile.id, tile.lane, tile.color, tile.content, tile.isStuck)}
-                className="absolute aspect-[3/4] rounded-2xl shadow-2xl flex flex-col items-center justify-center border-b-8 border-black/20"
+                onPointerDown={() => handleTileClick(tile.id, tile.lane, tile.color, tile.content, tile.isStuck)}
+                className="absolute aspect-[3/4] rounded-2xl shadow-2xl flex flex-col items-center justify-center border-b-8 border-black/20 before:absolute before:-inset-8 before:content-['']"
                 style={{
                   width: '23%',
                   left: `calc(${tile.lane * 25}% + 1%)`,
@@ -266,23 +352,6 @@ export default function App() {
           <span className="text-xl font-bold text-white">{score}</span>
         </div>
       </div>
-
-      {/* Reinforcement Popups */}
-      <AnimatePresence>
-        {score > 0 && score % 10 === 0 && (
-          <motion.div
-            initial={{ scale: 0, rotate: -20 }}
-            animate={{ scale: 1, rotate: 0 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center z-[100] pointer-events-none"
-          >
-            <div className="bg-white p-12 rounded-[4rem] shadow-2xl border-8 border-green-400 flex flex-col items-center">
-              <Smile size={120} className="text-green-500 mb-4" />
-              <h2 className="text-6xl font-black text-green-600 uppercase">Great!</h2>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
