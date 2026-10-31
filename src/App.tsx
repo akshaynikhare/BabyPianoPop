@@ -125,6 +125,83 @@ const AGE_CONFIGS: Record<AgeTier, AgeConfig> = {
   },
 };
 
+// Dreamy macaron pastel color palettes that cycle every 5 stars
+export interface PastelPalette {
+  id: string;
+  name: string;
+  bg: string;
+  blob1: string;
+  blob2: string;
+  starPillBg: string;
+}
+
+export const PASTEL_PALETTES: PastelPalette[] = [
+  {
+    id: 'lavender',
+    name: 'Dreamy Lavender',
+    bg: 'from-pink-100 via-purple-100 to-indigo-100',
+    blob1: 'bg-purple-300/30',
+    blob2: 'bg-pink-300/30',
+    starPillBg: 'from-purple-500 via-pink-500 to-purple-600',
+  },
+  {
+    id: 'peach',
+    name: 'Dreamy Peach',
+    bg: 'from-amber-100 via-rose-100 to-orange-100',
+    blob1: 'bg-amber-300/30',
+    blob2: 'bg-rose-300/30',
+    starPillBg: 'from-amber-500 via-orange-400 to-rose-500',
+  },
+  {
+    id: 'mint',
+    name: 'Dreamy Mint',
+    bg: 'from-emerald-100 via-teal-100 to-sky-100',
+    blob1: 'bg-emerald-300/30',
+    blob2: 'bg-teal-300/30',
+    starPillBg: 'from-emerald-500 via-teal-500 to-cyan-600',
+  },
+  {
+    id: 'rose',
+    name: 'Rose Macaron',
+    bg: 'from-rose-100 via-pink-100 to-fuchsia-100',
+    blob1: 'bg-rose-300/30',
+    blob2: 'bg-pink-300/30',
+    starPillBg: 'from-rose-500 via-pink-500 to-fuchsia-500',
+  },
+  {
+    id: 'sky',
+    name: 'Sky Marshmallow',
+    bg: 'from-sky-100 via-blue-100 to-indigo-100',
+    blob1: 'bg-sky-300/30',
+    blob2: 'bg-blue-300/30',
+    starPillBg: 'from-sky-500 via-blue-500 to-indigo-600',
+  },
+  {
+    id: 'lemon',
+    name: 'Buttercup Lemon',
+    bg: 'from-yellow-100 via-amber-100 to-emerald-100',
+    blob1: 'bg-yellow-300/30',
+    blob2: 'bg-lime-300/30',
+    starPillBg: 'from-amber-500 via-yellow-400 to-lime-500',
+  },
+];
+
+const AGE_BACKGROUND_GRADIENTS: Record<AgeTier, string> = {
+  '6-12m': PASTEL_PALETTES[0].bg,
+  '1-2y': PASTEL_PALETTES[1].bg,
+  '2-3y': PASTEL_PALETTES[2].bg,
+};
+
+// Gentle, warm praise phrases spoken by Jelly Bear every 5 stars in Praise Mode
+const PRAISE_PHRASES = [
+  "You're doing great!",
+  "Super star!",
+  "Keep going!",
+  "Wonderful job!",
+  "You did it!",
+  "So smart!",
+];
+
 const getContentForTier = (tier: AgeTier): string[] => {
   if (tier === '6-12m') {
     return [...SHAPES, ...INFANT_LETTERS, ...INFANT_NUMBERS];
@@ -776,7 +853,6 @@ const SETTING_TAP_PHRASES = ['Click!', 'Beep beep!', 'Twirl!', 'Tick tock!'];
 const ParentLockButton: React.FC<ParentLockButtonProps> = ({ ageTier, onUnlock }) => {
   const [isHolding, setIsHolding] = useState(false);
   const [progress, setProgress] = useState(0); // 0 to 100
-  const [remainingSecs, setRemainingSecs] = useState<number>(3.0);
   const [babyTapWobble, setBabyTapWobble] = useState(0);
   const holdStartRef = useRef<number | null>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -787,15 +863,12 @@ const ParentLockButton: React.FC<ParentLockButtonProps> = ({ ageTier, onUnlock }
     holdStartRef.current = performance.now();
     setIsHolding(true);
     setProgress(0);
-    setRemainingSecs(3.0);
 
     const checkHold = (time: number) => {
       if (!holdStartRef.current) return;
       const elapsed = time - holdStartRef.current;
       const pct = Math.min(100, (elapsed / 3000) * 100);
-      const remaining = Math.max(0, 3.0 - elapsed / 1000);
       setProgress(pct);
-      setRemainingSecs(remaining);
 
       if (elapsed >= 3000) {
         holdStartRef.current = null;
@@ -829,7 +902,6 @@ const ParentLockButton: React.FC<ParentLockButtonProps> = ({ ageTier, onUnlock }
     }
     setIsHolding(false);
     setProgress(0);
-    setRemainingSecs(3.0);
 
     // Baby tap interaction (< 1200ms quick tap without completing the 3-second parental hold)
     if (elapsed > 40 && elapsed < 1200) {
@@ -860,25 +932,7 @@ const ParentLockButton: React.FC<ParentLockButtonProps> = ({ ageTier, onUnlock }
 
   return (
     <div className="relative flex items-center">
-      {/* 3-Second Hold Countdown Popover */}
-      <AnimatePresence>
-        {isHolding && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.9 }}
-            className="absolute top-14 right-0 z-50 whitespace-nowrap bg-purple-950/95 text-white backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg border border-purple-300/80 flex items-center gap-2 pointer-events-none"
-          >
-            <Lock size={12} className="text-amber-300" />
-            <span className="font-black text-amber-300 text-xs">
-              {remainingSecs.toFixed(1)}s
-            </span>
-            <div className="absolute -top-1.5 right-4 w-3 h-3 bg-purple-950/95 border-t border-l border-purple-300/80 transform rotate-45" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Button with SVG Circular Fill Arc */}
+      {/* Button with SVG Circular Fill Arc (loading indicator on gear button) */}
       <motion.button
         type="button"
         aria-label={`Parent settings, current age ${config.title}. Hold for 3 seconds to open.`}
@@ -1049,6 +1103,8 @@ interface ParentSettingsModalProps {
   onSelectTier: (tier: AgeTier) => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  praiseMode: boolean;
+  onTogglePraiseMode: () => void;
 }
 
 const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
@@ -1058,6 +1114,8 @@ const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
   onSelectTier,
   isMuted,
   onToggleMute,
+  praiseMode,
+  onTogglePraiseMode,
 }) => {
   if (!isOpen) return null;
 
@@ -1127,6 +1185,47 @@ const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
             </button>
           </div>
 
+          {/* Praise Mode Setting Row */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-600">
+              Praise Mode
+            </span>
+            <button
+              type="button"
+              onClick={onTogglePraiseMode}
+              className={`w-full p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all active:scale-98 ${
+                praiseMode
+                  ? 'bg-purple-50/80 border-purple-300 text-purple-950 shadow-xs'
+                  : 'bg-gray-50 border-gray-200 text-gray-500'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    praiseMode
+                      ? 'bg-gradient-to-br from-pink-500 to-purple-600 text-white shadow-xs'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}
+                >
+                  <Sparkles size={18} />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-bold">Jelly Bear Cheers</span>
+                  <span className="text-[10px] text-purple-500 font-medium">Every 5 stars</span>
+                </div>
+              </div>
+              <span
+                className={`text-xs font-black px-3 py-1 rounded-full ${
+                  praiseMode
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                {praiseMode ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          </div>
+
           {/* Done Button */}
           <button
             onClick={onClose}
@@ -1144,11 +1243,12 @@ const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
 
 export default function App() {
   const [tiles, setTiles] = useState<TileData[]>([]);
-  const [score, setScore] = useState(0);
+  const [starCount, setStarCount] = useState(0); // 3 stars max (0, 1, 2, 3)
+  const [completedRounds, setCompletedRounds] = useState(0);
+  const resetTimerRef = useRef<number | null>(null);
   const [isStarted, setIsStarted] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [mascotMood, setMascotMood] = useState<MascotMood>('idle');
-  const [celebrationText, setCelebrationText] = useState<string | null>(null);
 
   // Age Tier State with LocalStorage Persistence
   const [ageTier, setAgeTier] = useState<AgeTier>(() => {
@@ -1162,14 +1262,43 @@ export default function App() {
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Praise Mode State with LocalStorage Persistence
+  const [praiseMode, setPraiseMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('baby_piano_praise_mode');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const togglePraiseMode = useCallback(() => {
+    setPraiseMode(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('baby_piano_praise_mode', String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const praiseIndexRef = useRef(0);
+
   const gameLoopRef = useRef<number>(0);
   const lastFrameTimeRef = useRef<number>(performance.now());
   const speedRef = useRef<number>(AGE_CONFIGS[ageTier].baseSpeed);
+  const tempoMultiplierRef = useRef<number>(1.0);
+  const lastTapTimeRef = useRef<number>(0);
   const nextIdRef = useRef<number>(0);
-  const gapRef = useRef<number>(150);
+  const gapRef = useRef<number>(240);
   const candyIndexRef = useRef<number>(0);
   const clickedTilesRef = useRef<Set<number>>(new Set());
   const moodTimeoutRef = useRef<number | null>(null);
+
+  // Dynamic Pastel Palette shifting on every 3-star completion
+  const tierOffset = ageTier === '6-12m' ? 0 : ageTier === '1-2y' ? 1 : 2;
+  const currentPaletteIndex = (completedRounds + tierOffset) % PASTEL_PALETTES.length;
+  const currentPalette = PASTEL_PALETTES[currentPaletteIndex];
 
   const handleSelectAgeTier = useCallback((tier: AgeTier) => {
     setAgeTier(tier);
@@ -1232,7 +1361,6 @@ export default function App() {
     });
   }, [setTemporaryMood]);
 
-  const counterTapIndexRef = useRef(0);
   const handleCounterTap = useCallback(() => {
     musicBox.playStarChime();
     confetti({
@@ -1242,19 +1370,16 @@ export default function App() {
       colors: ['#fbbf24', '#f59e0b', '#fef08a', '#ffffff'],
     });
 
-    let speechText = '';
-    if (score === 0) {
-      speechText = 'Zero stars! Tap the candy!';
-    } else if (score === 1) {
-      speechText = 'One star! Good job!';
+    if (starCount === 0) {
+      tts.speak('Tap candies to earn three stars!');
+    } else if (starCount === 1) {
+      tts.speak('One star! Get two more!');
+    } else if (starCount === 2) {
+      tts.speak('Two stars! One more to go!');
     } else {
-      const compliments = ['stars! Yay!', 'stars! Good job!', 'stars! High five!', 'stars! Super!'];
-      const comp = compliments[counterTapIndexRef.current % compliments.length];
-      counterTapIndexRef.current++;
-      speechText = `${score} ${comp}`;
+      tts.speak('Three stars! Super job!');
     }
-    tts.speak(speechText);
-  }, [score]);
+  }, [starCount]);
 
   // Audio unlock on early interaction
   useEffect(() => {
@@ -1270,7 +1395,7 @@ export default function App() {
     };
   }, []);
 
-  // Spawn new tile with content tailored to the selected age tier
+  // Spawn new tile with content tailored to the selected age tier, dropping from beneath top 100px bar
   const spawnTile = useCallback(() => {
     const lane = Math.floor(Math.random() * 4);
     const candyIndex = candyIndexRef.current % CANDY_THEMES.length;
@@ -1284,12 +1409,12 @@ export default function App() {
       lane,
       candyIndex,
       content,
-      y: -220, // Flows naturally from beneath top 100px bar
+      y: 95, // Drops smoothly right from beneath the 100px top bar
       isStuck: false,
     };
   }, [ageTier]);
 
-  // Frame-rate independent game loop with silky-smooth deceleration
+  // Frame-rate independent game loop with reinforcement learning adaptive drop speed
   useEffect(() => {
     if (!isStarted) return;
 
@@ -1299,6 +1424,15 @@ export default function App() {
       const dt = Math.min(35, timestamp - lastFrameTimeRef.current);
       lastFrameTimeRef.current = timestamp;
       const timeScale = dt / 16.67; // Normalized to 60fps
+
+      // Reinforcement learning pace decay:
+      // Gently ease tempo back towards 1.0 baseline when baby pauses or plays slowly
+      const timeSinceTap = timestamp - lastTapTimeRef.current;
+      if (timeSinceTap > 950 && tempoMultiplierRef.current > 1.0) {
+        tempoMultiplierRef.current = Math.max(1.0, tempoMultiplierRef.current - 0.015 * timeScale);
+      }
+
+      const effectiveSpeed = speedRef.current * tempoMultiplierRef.current;
 
       setTiles(prev => {
         const stuckTile = prev.find(t => t.isStuck);
@@ -1324,14 +1458,14 @@ export default function App() {
             setTemporaryMood('encourage', 2000);
             return { ...t, y: bottomThreshold, isStuck: true };
           }
-          return { ...t, y: t.y + speedRef.current * timeScale };
+          return { ...t, y: t.y + effectiveSpeed * timeScale };
         });
 
-        // Spawn new tiles with gentle spacing
+        // Spawn new tiles with gentle spacing dropping right from beneath top bar
         const highestY = updated.length > 0 ? Math.min(...updated.map(t => t.y)) : 1000;
         if (highestY > gapRef.current && !hitBottom) {
           updated.push(spawnTile());
-          gapRef.current = 140 + Math.random() * 110;
+          gapRef.current = 220 + Math.random() * 80;
         }
 
         return updated;
@@ -1391,17 +1525,57 @@ export default function App() {
       });
     }
 
-    setScore(s => {
-      const nextScore = s + 1;
-      // Celebrate milestone every 10 pops!
-      if (nextScore > 0 && nextScore % 10 === 0) {
-        setTemporaryMood('celebrate', 2500);
-        setCelebrationText('SWEET!');
-        window.setTimeout(() => setCelebrationText(null), 1800);
+    // Reinforcement learning pace boost:
+    // If the baby is playing quickly (under 1.5s between pops), accelerate dropping letters
+    const now = performance.now();
+    const timeSinceLastTap = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    if (timeSinceLastTap < 1500) {
+      tempoMultiplierRef.current = Math.min(2.4, tempoMultiplierRef.current + 0.35);
+    }
+
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+
+    setStarCount(prev => {
+      // If already at 3 stars, start fresh at 1 for the next 3-star cycle
+      const next = prev >= 3 ? 1 : prev + 1;
+
+      // 3-Star Max Milestone reached! Celebrate, shift pastel palette, and reset
+      if (next === 3) {
+        setCompletedRounds(r => r + 1);
+        setTemporaryMood('celebrate', 2400);
+        musicBox.playStarChime();
+        confetti({
+          particleCount: 28,
+          spread: 70,
+          origin: { y: 0.12, x: 0.5 },
+          colors: ['#ff70a6', '#ffd166', '#06d6a0', '#a855f7'],
+        });
+
+        if (praiseMode) {
+          const phrase = PRAISE_PHRASES[praiseIndexRef.current % PRAISE_PHRASES.length];
+          praiseIndexRef.current++;
+          window.setTimeout(() => {
+            tts.speak(`Three stars! ${phrase}`);
+          }, 280);
+        } else {
+          window.setTimeout(() => {
+            tts.speak('Three stars! Hooray!');
+          }, 280);
+        }
+
+        // Reset back to 0 after celebrating 3 stars
+        resetTimerRef.current = window.setTimeout(() => {
+          setStarCount(0);
+        }, 1800);
       } else {
         setTemporaryMood('happy', 900);
       }
-      return nextScore;
+
+      return next;
     });
 
     // Gentle adaptive pace reinforcement tailored to active age tier
@@ -1413,7 +1587,7 @@ export default function App() {
     }
 
     setTiles(prev => prev.filter(t => t.id !== id));
-  }, [ageTier, setTemporaryMood]);
+  }, [ageTier, praiseMode, setTemporaryMood]);
 
   // Point Check with Top 100px Guard + Sticky Hit Area (+15% radius expansion during motion)
   const checkPoint = useCallback((x: number, y: number, isMoving: boolean) => {
@@ -1523,12 +1697,12 @@ export default function App() {
   // --- Clean Minimal Start Screen ---
   if (!isStarted) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-b from-pink-200 via-purple-100 to-sky-200 flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden touch-none">
+      <div className={`fixed inset-0 bg-gradient-to-b ${currentPalette.bg} transition-colors duration-1000 ease-in-out flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden touch-none`}>
         {/* Subtle, floating background bubble animation */}
         <FloatingBubbles />
 
-        <div className="absolute -top-16 -left-16 w-64 h-64 bg-pink-300/40 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-purple-300/40 rounded-full blur-3xl pointer-events-none" />
+        <div className={`absolute -top-16 -left-16 w-64 h-64 ${currentPalette.blob1} rounded-full blur-3xl pointer-events-none transition-colors duration-1000`} />
+        <div className={`absolute -bottom-20 -right-20 w-80 h-80 ${currentPalette.blob2} rounded-full blur-3xl pointer-events-none transition-colors duration-1000`} />
         <div className="absolute top-1/3 left-10 w-24 h-24 bg-yellow-200/50 rounded-full blur-2xl pointer-events-none" />
 
         {/* Cheerful Mascot */}
@@ -1574,7 +1748,7 @@ export default function App() {
   // --- Active Gameplay Screen ---
   return (
     <div
-      className="fixed inset-0 bg-gradient-to-b from-pink-200 via-purple-100 to-sky-200 flex justify-center overflow-hidden select-none touch-none"
+      className={`fixed inset-0 bg-gradient-to-b ${currentPalette.bg} transition-colors duration-1000 ease-in-out flex justify-center overflow-hidden select-none touch-none`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onPointerDown={handlePointerDown}
@@ -1583,8 +1757,8 @@ export default function App() {
       {/* Subtle, floating background bubble animation */}
       <FloatingBubbles />
 
-      <div className="absolute top-10 left-[-15%] w-72 h-72 bg-pink-300/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-[-15%] w-80 h-80 bg-sky-300/30 rounded-full blur-3xl pointer-events-none" />
+      <div className={`absolute top-10 left-[-15%] w-72 h-72 ${currentPalette.blob1} rounded-full blur-3xl pointer-events-none transition-colors duration-1000`} />
+      <div className={`absolute bottom-10 right-[-15%] w-80 h-80 ${currentPalette.blob2} rounded-full blur-3xl pointer-events-none transition-colors duration-1000`} />
 
       {/* Main Game Board */}
       <div className="relative w-full max-w-md h-full bg-white/35 backdrop-blur-[2px] border-x-2 border-white/40 shadow-2xl">
@@ -1603,29 +1777,9 @@ export default function App() {
           ))}
         </div>
 
-        {/* Milestone Streak Celebration (Translucent, Non-blocking, Top Area) */}
-        <AnimatePresence>
-          {celebrationText && (
-            <motion.div
-              initial={{ scale: 0.4, y: -20, opacity: 0 }}
-              animate={{ scale: 1.05, y: 0, opacity: 1 }}
-              exit={{ scale: 0.6, opacity: 0 }}
-              transition={{ type: 'spring', damping: 14 }}
-              className="absolute top-28 left-0 right-0 flex items-center justify-center z-20 pointer-events-none"
-            >
-              <div className="bg-gradient-to-r from-pink-500/85 via-purple-500/85 to-indigo-500/85 backdrop-blur-md px-8 py-4 rounded-[2.5rem] shadow-xl border-4 border-white/70 flex items-center gap-3">
-                <Sparkles size={36} className="text-yellow-200 animate-spin" />
-                <h2 className="text-4xl font-black text-white uppercase tracking-wider drop-shadow-md">
-                  {celebrationText}
-                </h2>
-                <Sparkles size={36} className="text-yellow-200 animate-spin" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Falling Tiles (Letters, Numbers, and Full Shape Buttons) */}
-        <div className="absolute inset-0">
+        {/* Drops smoothly from beneath the 100px top bar */}
+        <div className="absolute inset-0 overflow-hidden" style={{ clipPath: 'inset(100px 0 0 0)' }}>
           {tiles.map(tile => {
             const theme = CANDY_THEMES[tile.candyIndex % CANDY_THEMES.length];
             const isShape = isShapeContent(tile.content);
@@ -1756,8 +1910,9 @@ export default function App() {
 
       {/* --- TOP 100PX BANNER (Touch-Protected Header) --- */}
       {/* Strict top 100px touch guard protects mascot, score, and settings */}
+      {/* Fully opaque solid bg-white so falling letters emerge right from beneath */}
       <header className="fixed top-0 inset-x-0 h-[100px] z-50 flex items-center justify-center pointer-events-auto">
-        <div className="w-full max-w-md h-full px-3 sm:px-4 flex items-center justify-between bg-white/80 backdrop-blur-md border-b-2 border-white/70 shadow-sm rounded-b-3xl overflow-hidden relative">
+        <div className="w-full max-w-md h-full px-3 sm:px-4 flex items-center justify-between bg-white border-b-2 border-purple-100/90 shadow-md rounded-b-3xl overflow-hidden relative">
           
           {/* Mascot in Top Banner - Animated and voice interactive on baby tap */}
           <motion.button
@@ -1771,31 +1926,39 @@ export default function App() {
             <JellyBearMascot mood={mascotMood} size={52} />
           </motion.button>
 
-          {/* Candy Score Counter - Protected, shrink-0, auto-scaled so 5+ stars never overflow UI */}
+          {/* 3-Star Max Candy Counter - Exactly 3 stars, fixed width, never overflows */}
           <motion.button
             type="button"
-            aria-label={`${score} stars. Tap to count.`}
+            aria-label={`${starCount} of 3 stars. Tap to count.`}
             onClick={handleCounterTap}
-            whileHover={{ scale: 1.04 }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.94 }}
-            className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 rounded-full border-2 border-white/80 shadow-md cursor-pointer select-none transition-transform min-w-[68px] max-w-[110px] overflow-hidden"
+            className={`shrink-0 flex items-center justify-center gap-2 px-3.5 py-1.5 bg-gradient-to-r ${currentPalette.starPillBg} rounded-full border-2 border-white shadow-md cursor-pointer select-none transition-all duration-700 min-w-[96px] max-w-[110px] h-[42px]`}
           >
-            <motion.div
-              animate={{ rotate: [0, 15, -15, 0] }}
-              transition={{ duration: 0.4 }}
-              key={score}
-              className="shrink-0"
-            >
-              <Star className="text-white fill-yellow-200 drop-shadow" size={18} />
-            </motion.div>
-            <motion.span
-              key={score}
-              initial={{ scale: 1.25 }}
-              animate={{ scale: 1 }}
-              className={`font-black text-white drop-shadow-sm truncate text-center ${getScoreTextClass(score)}`}
-            >
-              {formatScore(score)}
-            </motion.span>
+            {[0, 1, 2].map(idx => {
+              const isFilled = starCount > idx;
+              return (
+                <motion.div
+                  key={idx}
+                  animate={
+                    isFilled
+                      ? { scale: [1, 1.25, 1], rotate: [0, 12, -12, 0] }
+                      : { scale: 1, rotate: 0 }
+                  }
+                  transition={{ duration: 0.3 }}
+                  className="shrink-0 flex items-center justify-center"
+                >
+                  <Star
+                    size={21}
+                    className={
+                      isFilled
+                        ? 'text-yellow-200 fill-yellow-300 drop-shadow-xs'
+                        : 'text-white/45 fill-white/15'
+                    }
+                  />
+                </motion.div>
+              );
+            })}
           </motion.button>
 
           {/* Right Controls: 3-Second Timed Parental Settings Button (Sound is inside settings) */}
@@ -1816,6 +1979,8 @@ export default function App() {
         onSelectTier={handleSelectAgeTier}
         isMuted={isMuted}
         onToggleMute={toggleMute}
+        praiseMode={praiseMode}
+        onTogglePraiseMode={togglePraiseMode}
       />
     </div>
   );
