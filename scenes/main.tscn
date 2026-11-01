@@ -1,0 +1,37 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/ui/background.gd" id="2_bg"]
+[ext_resource type="Script" path="res://scripts/ui/bubbles.gd" id="3_bubbles"]
+[ext_resource type="Script" path="res://scripts/fx/burst_pool.gd" id="4_fx"]
+[ext_resource type="PackedScene" path="res://scenes/settings_sheet.tscn" id="5_sheet"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_main")
+
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="Background" type="ColorRect" parent="BackgroundLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_bg")
+
+[node name="Bubbles" type="Node2D" parent="BackgroundLayer"]
+script = ExtResource("3_bubbles")
+
+[node name="Screens" type="Node" parent="."]
+
+[node name="FxLayer" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="BurstPool" type="Node2D" parent="FxLayer"]
+script = ExtResource("4_fx")
+
+[node name="SettingsLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="SettingsSheet" parent="SettingsLayer" instance=ExtResource("5_sheet")]

@@ -5,10 +5,10 @@
   "packageManager": "npm",
   "apps": [],
   "commands": {
-    "dev": "npm run dev",
-    "test": "echo 'TODO(verify): test command'; exit 1",
-    "lint": "npm run lint",
-    "typecheck": "echo 'TODO(verify): typecheck command'; exit 1"
+    "dev": "make run",
+    "test": "make test",
+    "lint": "make lint",
+    "typecheck": "make typecheck"
   },
   "ports": {},
   "srcDirs": [
