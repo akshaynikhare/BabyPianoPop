@@ -24,10 +24,19 @@ godot --headless --path . --quit-after 120            # run main scene ~2 s head
 | Autoload | API |
 |---|---|
 | `EventBus` | Signals: `game_started`, `tile_popped`, `tile_stuck`, `stars_changed`, `round_completed`, `mascot_mood_changed`, `settings_opened/closed`, `app_paused/resumed`, `settings_changed`. The game agent may add signals here; list them in its report. |
-| `Settings` | `get_value(key)`, `set_value(key, value)`. Keys: `age_tier` (`6-12m` / `1-2y` / `2-3y`), `praise_mode`, `music_on`. |
-| `AudioDirector` | `play_sfx`, `play_voice` (interrupts), `stop_voice`, `play_music` (loops), `stop_music`, `set_bus_muted(bus, muted)`, `pause_all` / `resume_all`. Buses: Music, SFX, Voice. Files: `assets/audio/{sfx,voice,music}/<name>.ogg`. |
+| `Settings` | `get_value(key)`, `set_value(key, value)`. Keys: `age_tier` (`6-12m` / `1-2y` / `2-3y`), `praise_mode`, `music_on`, `quiet_mode` (default false). |
+| `AudioDirector` | `play_sfx`, `stop_sfx`, `play_voice` (interrupts the previous line), `voice_length`, `stop_voice`, `play_music` (loops, crossfades from the current track), `stop_music`, `set_bus_muted(bus, muted)`, `set_quiet(on)`, `pause_all` / `resume_all`. Files: `assets/audio/{sfx,voice,music}/<name>.ogg`. Details below. |
 | `Haptics` | `play(pattern)`: pop, stuck, stars, unlock, tick. |
 | `Lifecycle` | Pauses the tree and audio when the app is backgrounded. |
+
+### AudioDirector
+- **Players:** a pool of `SFX_POOL_SIZE` SFX players, one voice player and two music players. SFX can never cut the voice because it has its own player. A free SFX player is used when there is one.
+- **Variant groups:** an SFX id with no file of its own but numbered files (`pop_1.ogg` ... `pop_4.ogg`) is a group. `play_sfx(&"pop")` picks one at random, never the same one twice in a row (`SfxVariants`, indexed once at preload). Pitch and volume also vary a little (pitch x(1 +/- 0.03), volume +/- 1.5 dB) except for `ui_*`, `star*` and `celebrate`. Asking for the same sound again within 40 ms is ignored, so mashing can't stack copies.
+- **Buses:** Music, SFX and Voice send to Master. Levels are named constants in `audio_director.gd`: Voice 0 dB is the anchor, SFX -3 dB, Music -6 dB (the music file is 4 dB under the voice file, so the music sits 10 dB under the voice). Master has an `AudioEffectHardLimiter` with a -1 dB ceiling, added at startup.
+- **Quiet mode:** `set_quiet(true)` sets Master to -8 dB. `AudioPrefs.apply()` calls it from the saved `quiet_mode`, and also applies `music_on` (Music and SFX buses muted, voice stays audible).
+- **Music:** one loop per age tier, from `GameContent.music_id(tier)`: `6-12m` `music_calm`, `1-2y` `music_box`, `2-3y` `music_play`. `play_music` fades the new track in and the old one out over `MUSIC_FADE_SECS`; `main.gd` calls `AudioPrefs.apply()` when `age_tier` changes during play.
+- **Hold tone:** `stop_sfx(&"ui_hold")` cuts the gear hold tone when the finger lifts early.
+- **Tests:** the test runner has no scene tree, so a test that needs a director calls its `_ready()` by hand. Test the pure parts (`SfxVariants`, `GameContent`) first.
 
 ## Folders and ownership
 | Path | Owner |

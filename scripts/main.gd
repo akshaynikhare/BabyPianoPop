@@ -46,6 +46,8 @@ func _apply_palette() -> void:
 func _on_setting_changed(key: StringName, _value: Variant) -> void:
 	if key == &"age_tier":
 		_apply_palette()
+		if _gameplay != null:
+			AudioPrefs.apply()
 
 
 func _on_round_completed(rounds: int) -> void:
@@ -54,8 +56,8 @@ func _on_round_completed(rounds: int) -> void:
 
 
 func _on_app_resumed() -> void:
-	if bool(Settings.get_value(&"music_on")) and _gameplay != null:
-		AudioDirector.play_music(&"music_box")
+	if _gameplay != null:
+		AudioPrefs.apply()
 
 
 func _on_play() -> void:

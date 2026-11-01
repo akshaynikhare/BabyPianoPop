@@ -2,7 +2,13 @@ class_name ToggleRow
 extends CozyButton
 ## Full-width setting row: round badge, label, and an ON / OFF pill.
 
-enum Kind { MUSIC, CHEERS }
+enum Kind { MUSIC, CHEERS, QUIET }
+
+const BADGE_FILLS := {
+	Kind.MUSIC: Color("b7a1ff"),
+	Kind.CHEERS: Color("ff9ec1"),
+	Kind.QUIET: Color("8fd3f4"),
+}
 
 var kind := Kind.MUSIC
 var on := true:
@@ -14,17 +20,25 @@ var label := ""
 var note := ""
 
 
+func _init() -> void:
+	on_press = true
+
+
 func _draw_content(body: Rect2) -> void:
 	var cy := body.get_center().y
 	var badge_c := Vector2(body.position.x + 56.0, cy)
-	var badge_fill := Color("ff9ec1") if kind == Kind.CHEERS else Color("b7a1ff")
+	var disc: Color = BADGE_FILLS[kind] if on else Color("d8cbb5")
 	draw_circle(badge_c, 33.0, UIStyle.BROWN)
-	draw_circle(badge_c, 28.0, badge_fill if on else Color("d8cbb5"))
-	if kind == Kind.MUSIC:
-		_draw_note(badge_c)
-	else:
-		UIStyle.draw_sparkle(self, badge_c + Vector2(-5, 4), 17.0, Color("fef08a"), 2.6)
-		UIStyle.draw_sparkle(self, badge_c + Vector2(11, -12), 8.0, Color.WHITE, 2.2)
+	draw_circle(badge_c, 28.0, disc)
+	match kind:
+		Kind.MUSIC:
+			_draw_note(badge_c)
+		Kind.CHEERS:
+			UIStyle.draw_sparkle(self, badge_c + Vector2(-5, 4), 17.0, Color("fef08a"), 2.6)
+			UIStyle.draw_sparkle(self, badge_c + Vector2(11, -12), 8.0, Color.WHITE, 2.2)
+		Kind.QUIET:
+			draw_circle(badge_c + Vector2(-2, 1), 15.0, Color.WHITE)
+			draw_circle(badge_c + Vector2(6, -5), 13.0, disc)
 
 	var f := UIStyle.font(700)
 	var text_x := body.position.x + 112.0

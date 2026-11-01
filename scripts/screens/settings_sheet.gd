@@ -1,6 +1,6 @@
 class_name SettingsSheet
 extends Control
-## Parent settings: age, music and praise mode. The game halts while this is open.
+## Parent settings: age, music, praise mode and quiet mode. The game halts while this is open.
 
 const PANEL_W := 640.0
 const PAD := 32.0
@@ -11,6 +11,7 @@ var _title := _Title.new()
 var _age := AgeSelector.new()
 var _music := ToggleRow.new()
 var _cheers := ToggleRow.new()
+var _quiet := ToggleRow.new()
 var _done := CozyButton.new()
 var _close := CozyButton.new()
 var _tween: Tween
@@ -59,6 +60,12 @@ func _ready() -> void:
 	_panel.add_child(_cheers)
 	_cheers.activated.connect(_toggle_cheers)
 
+	_quiet.kind = ToggleRow.Kind.QUIET
+	_quiet.label = "Quiet Mode"
+	_quiet.note = "Softer for sleepy time"
+	_panel.add_child(_quiet)
+	_quiet.activated.connect(_toggle_quiet)
+
 	_done.text = "Done"
 	_done.font_size = 52
 	_done.fill = Color("ff9ec1")
@@ -100,6 +107,9 @@ func _layout() -> void:
 	y += 112.0 + 20.0
 	_cheers.position = Vector2(PAD, y)
 	_cheers.size = Vector2(inner, 124)
+	y += 124.0 + 20.0
+	_quiet.position = Vector2(PAD, y)
+	_quiet.size = Vector2(inner, 124)
 	y += 124.0 + 30.0
 	_done.position = Vector2(PAD, y)
 	_done.size = Vector2(inner, 116)
@@ -114,10 +124,12 @@ func _layout() -> void:
 func open() -> void:
 	_music.on = bool(Settings.get_value(&"music_on"))
 	_cheers.on = bool(Settings.get_value(&"praise_mode"))
+	_quiet.on = bool(Settings.get_value(&"quiet_mode"))
 	var saved: Variant = Settings.get_value(&"age_tier")
 	_age.set_tier(saved if GameContent.is_valid_tier(saved) else GameContent.DEFAULT_TIER, true)
 	_layout()
 	visible = true
+	AudioDirector.play_sfx(&"ui_open")
 	_animate(true)
 	EventBus.settings_opened.emit()
 
@@ -125,7 +137,7 @@ func open() -> void:
 func close() -> void:
 	if not visible:
 		return
-	AudioDirector.play_sfx(&"tick")
+	AudioDirector.play_sfx(&"ui_close")
 	_animate(false)
 	EventBus.settings_closed.emit()
 
@@ -150,11 +162,19 @@ func _toggle_music() -> void:
 	Settings.set_value(&"music_on", on)
 	_music.on = on
 	AudioPrefs.apply()
-	AudioDirector.play_sfx(&"tick")
+	AudioDirector.play_sfx(&"ui_toggle")
 
 
 func _toggle_cheers() -> void:
 	var on := not bool(Settings.get_value(&"praise_mode"))
 	Settings.set_value(&"praise_mode", on)
 	_cheers.on = on
-	AudioDirector.play_sfx(&"tick")
+	AudioDirector.play_sfx(&"ui_toggle")
+
+
+func _toggle_quiet() -> void:
+	var on := not bool(Settings.get_value(&"quiet_mode"))
+	Settings.set_value(&"quiet_mode", on)
+	_quiet.on = on
+	AudioPrefs.apply()
+	AudioDirector.play_sfx(&"ui_toggle")

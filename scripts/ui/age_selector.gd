@@ -34,6 +34,7 @@ func _init() -> void:
 		card.sub_size = 23
 		card.radius = 26.0
 		card.depth = 9.0
+		card.on_press = true
 		card.activated.connect(_choose.bind(i))
 		add_child(card)
 		_cards.append(card)
@@ -83,7 +84,7 @@ func _choose(index: int) -> void:
 	if not changed and _dragging:
 		return
 	Settings.set_value(&"age_tier", new_tier)
-	AudioDirector.play_sfx(&"pop")
+	AudioDirector.play_sfx(&"ui_tap")
 	AudioDirector.play_voice(GameContent.TIER_CONFIG[new_tier]["voice"])
 	Haptics.play(&"tick")
 	tier_chosen.emit(new_tier)

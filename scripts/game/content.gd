@@ -10,7 +10,7 @@ const ALPHABET: Array[String] = [
 	"N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
 ]
 const NUMBERS: Array[String] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-const PRAISE_COUNT := 6
+const PRAISE_COUNT := 12
 const MASCOT_PHRASE_COUNT := 6
 const GEAR_PHRASE_COUNT := 4
 
@@ -25,6 +25,7 @@ const TIER_CONFIG := {
 		"palette_offset": 0,
 		"accent": Color("f9a8d4"),
 		"voice": &"tier_6_12m",
+		"music": &"music_calm",
 	},
 	"1-2y": {
 		"stage": "Young Toddler",
@@ -36,6 +37,7 @@ const TIER_CONFIG := {
 		"palette_offset": 1,
 		"accent": Color("fcd34d"),
 		"voice": &"tier_1_2y",
+		"music": &"music_box",
 	},
 	"2-3y": {
 		"stage": "Toddler",
@@ -47,6 +49,7 @@ const TIER_CONFIG := {
 		"palette_offset": 2,
 		"accent": Color("c4b5fd"),
 		"voice": &"tier_2_3y",
+		"music": &"music_play",
 	},
 }
 
@@ -98,6 +101,11 @@ static func palette_index(tier: String, completed_rounds: int) -> int:
 
 static func base_speed(tier: String) -> float:
 	return TIER_CONFIG[tier]["base_speed"]
+
+
+## The background loop for a saved tier value; anything that isn't a tier gets the default's.
+static func music_id(tier: Variant) -> StringName:
+	return TIER_CONFIG[tier if is_valid_tier(tier) else DEFAULT_TIER]["music"]
 
 
 static func is_shape(content: String) -> bool:

@@ -10,15 +10,16 @@ This spec covers the behaviour of the React/Capacitor version (v0.3.0) that the 
    - Pastel gradient background with floating bubbles.
    - Jelly Bear mascot (120px, "happy" mood). It can be tapped, with the same effect as tapping it in the header.
    - Age selector: 3 buttons plus a 0–2 slider. Each button shows the stage name and its title.
-   - Pulsing **PLAY** button (scale [1, 1.04, 1] over 2 s). Pressing it unlocks audio, starts the music box and sets the mood to happy for 1500 ms.
+   - Pulsing **PLAY** button (scale [1, 1.04, 1] over 2 s). Pressing it unlocks audio, plays `ui_tap`, starts the music loop of the saved age tier and sets the mood to happy for 1500 ms.
 2. **Gameplay**
    - The board is at most 448 px wide (scale this to the viewport) and has 4 dashed lanes.
    - The header is fixed and 100 px tall (scaled): Jelly Bear (52 px) on the left, a 3-star pill in the middle, a 44 px gear on the right.
 3. **Choosing an age tier** does all of the following:
    - saves the tier
    - resets speed to that tier's `baseSpeed`
-   - plays the pop chime
+   - plays `ui_tap`
    - speaks the tier title
+   - during play, crossfades the music to the new tier's loop
    - sets the mood to happy for 1400 ms
 
 ## Age tiers (A:74-126, content pools A:43-50 and A:205-213)
@@ -60,7 +61,7 @@ This spec covers the behaviour of the React/Capacitor version (v0.3.0) that the 
 
 ## Popping a tile (A:1482-1590)
 1. Ignore the tile if its id has already been popped.
-2. Play the pop chime, then speak the tile's content (voice clip; see PHONETIC_MAP).
+2. Play `pop`, then speak the tile's content (voice clip; see PHONETIC_MAP). This happens on touch-down, not on release.
 3. Burst particles. Origin y is 0.72 of the screen for every tier; the rest depends on the tier:
 
    | Tier | Count | Spread | Gravity | Scale | Shapes | Colours (`theme.shadow` first) |
@@ -74,9 +75,9 @@ This spec covers the behaviour of the React/Capacitor version (v0.3.0) that the 
    - When `next` reaches 3:
      - `completedRounds++`, which shifts the palette
      - mood "celebrate" for 2400 ms
-     - star chime
+     - `star` chime, then the soft `celebrate` jingle 200 ms later
      - a burst of 28 particles, spread 70°, at (0.5, 0.12), colours `#ff70a6 #ffd166 #06d6a0 #a855f7`
-     - after 280 ms, speak "Three stars! {PRAISE[i++]}" if praise mode is on, otherwise "Three stars! Hooray!"
+     - speak "Three stars! {PRAISE[i++]}" (12 phrases) if praise mode is on, otherwise "Three stars! Hooray!". **Rewrite change:** it starts 150 ms after the tile's own word has finished (the old fixed 280 ms would cut the new, longer word), and it is skipped if another tile was popped in the meantime, so a late line never cuts a newer word
      - after 1800 ms, reset stars to 0
    - Otherwise: mood "happy" for 900 ms.
 6. **Speed adapt:**
@@ -96,7 +97,7 @@ Inputs:
 
 ## Header interactions
 - **Mascot tap:**
-  - giggle sound
+  - `giggle` and `boing` sounds
   - mood "celebrate" for 1200 ms
   - speak the next of MASCOT_PHRASES, cycling in order
   - a burst of 22 particles, spread 70°, at (0.18, 0.12)
@@ -107,19 +108,22 @@ Inputs:
   - 3: "Three stars! Super job!"
 - **Gear (parent gate):**
   - Hold for **3000 ms** (ring progress r = 20, gradient `#ec4899 → #8b5cf6`) to:
-    - vibrate (`unlock`)
+    - vibrate (`unlock`) and play `ui_unlock`
     - burst 22 particles at (0.8, 0.12) in `#a855f7 #ec4899 #3b82f6`
     - open settings
+  - **Rewrite change:** while the ring shows (after 150 ms) the `ui_hold` tone plays; it stops when the finger lifts early or the gate opens.
   - Releasing after 40–1200 ms:
     - wobble (rotate [0, 90, −45, 30, 0] over 0.45 s)
-    - tick sound
+    - `tick` sound
     - speak the next of `['Click!','Beep beep!','Twirl!','Tick tock!']`, cycling
     - burst 12 particles at (0.88, 0.12)
   - Releasing between 1200 and 3000 ms does nothing.
 - **Settings modal:**
   - **Age:** the same 3-way selector.
-  - **Music:** ON/OFF. Muting silences synth sounds and music, but not speech.
+  - **Music:** ON/OFF. Muting silences sound effects and music, but not speech.
   - **Praise Mode:** "Jelly Bear Cheers", ON/OFF.
+  - **Quiet Mode (rewrite change):** ON/OFF, saved as `quiet_mode`. ON lowers the whole mix (Master bus) by 8 dB.
+  - Opening plays `ui_open`, closing plays `ui_close`, each toggle plays `ui_toggle`.
   - **Done** and **X** both close it.
   - **Rewrite change:** the game pauses while the modal is open.
 
@@ -130,10 +134,10 @@ Inputs:
 | Tier subsets | A:43-50 |
 | AGE_CONFIGS strings | A:74-126 |
 | PASTEL_PALETTES (6) | A:138-187 |
-| PRAISE_PHRASES | A:196-203 |
+| PRAISE_PHRASES (the first 6; the rewrite has 12, see Voice clips) | A:196-203 |
 | PHONETIC_MAP (A–Z, 0–9, shapes; e.g. A → "Ay", W → "Double-you", ★ → "Star") | A:216-263 |
 | CANDY_THEMES (6) | A:265-272 |
-| Music-box melody | A:296-304 |
+| Music-box melody (the rewrite uses rendered loops instead, see Audio) | A:296-304 |
 | SETTING_TAP_PHRASES | A:851 |
 | MASCOT_PHRASES ("Peekaboo!", "Yay! Hello baby!", "Giggle giggle!", "Wheee!", "I see you!", "Peekaboo! Big smile!") | A:1341 |
 
@@ -160,6 +164,8 @@ Inputs:
 | grape-jelly | `#a855f7 → #d946ef → #7e22ce` | `#6b21a8` |
 
 ## Audio (old recipes; master gain 0.12, set to 0 when muted)
+These are the web app's synth recipes, kept for reference. The rewrite plays rendered clips instead (see "Rewrite changes", Audio).
+
 | Sound | Recipe |
 |---|---|
 | Music-box loop | 28-note melody (A:296). Each note plays `chime(f)`. Gap between notes is 520 ms, or 950 ms when `noteIndex % 8 == 0`. |
@@ -177,6 +183,7 @@ Inputs:
 | `age_tier` | `6-12m` / `1-2y` / `2-3y` | `1-2y` |
 | `praise_mode` | bool | true |
 | `music_on` | bool | true (new: now saved) |
+| `quiet_mode` | bool | false (new) |
 
 ## Visual identity to keep
 - **Jelly Bear:**
@@ -219,15 +226,33 @@ Inputs:
    - Particles use CPUParticles2D, or one pooled custom burst node.
    - No full-screen blur.
 4. **Audio:**
-   - Every sound is a pre-rendered OGG through AudioDirector: SFX bus (pop, chime notes, giggle, star, tick), Music bus (music-box loop rendered as one seamless OGG), Voice bus (Kokoro clips).
-   - No runtime synthesis.
-   - Speech interrupts the previous line.
+   - Every sound is a pre-rendered OGG through AudioDirector: SFX bus (effects and UI sounds), Music bus (one seamless loop per age tier), Voice bus (Jelly Bear's lines). No runtime synthesis.
+   - SFX and music are ElevenLabs renders (prompts in `tools/audio/eleven_sounds.csv`); the voice is ElevenLabs TTS (lines in `tools/audio/eleven_lines.csv`).
+   - Speech interrupts the previous line. Sound effects have their own players and can never cut speech.
+   - **Variant groups:** an SFX kept as `<id>_1 ... <id>_N` plays as `<id>`. Each play picks one at random, never the same as last time. Everything except `ui_*`, `star*` and `celebrate` also varies pitch by x(1 +/- 0.03) and volume by +/- 1.5 dB.
+   - **Re-trigger cap:** the same sound asked for again within 40 ms is ignored.
+   - **Mix:** Voice bus 0 dB (the anchor), SFX bus -3 dB, Music bus -6 dB (music files are 4 dB under the voice files, so 10 dB under the voice overall). A hard limiter with a -1 dB ceiling sits on Master. Quiet mode puts Master at -8 dB.
+   - **Music per age tier:** `6-12m` `music_calm`, `1-2y` `music_box`, `2-3y` `music_play`. Changing the tier during play crossfades (1.2 s). The music setting still mutes the Music and SFX buses and stops the music; speech stays audible.
+
+   | Event | Sound |
+   |---|---|
+   | Tile pop | `pop`, then the tile's voice clip, on touch-down |
+   | Three stars | `star`, `celebrate` 200 ms later, then "Three stars! ..." after the tile's word |
+   | Mascot tap (start screen and header) | `giggle` + `boing`, then a mascot phrase |
+   | Star pill tap | `star`, then the star-count line |
+   | Gear short press (40-1200 ms) | `tick`, then a gear phrase |
+   | Gear held past 150 ms | `ui_hold` while holding; stopped on early release |
+   | Gear hold reaches 3 s | `ui_unlock`, then the settings sheet opens with `ui_open` |
+   | PLAY, age card or slider | `ui_tap` (the card or slider also speaks the tier title) |
+   | Settings toggles (music, praise, quiet) | `ui_toggle` |
+   | Settings sheet closes (Done or X) | `ui_close` |
+
 5. **Voice clips** (ids used by code): ids are snake_case of the content.
    - letters `letter_a` … `letter_z`
    - numbers `number_0` … `number_9`
    - shapes `shape_star`, `shape_heart`, `shape_circle`, `shape_triangle`, `shape_square`
    - tier titles `tier_6_12m`, `tier_1_2y`, `tier_2_3y`
-   - praise `praise_<n>`
+   - praise `praise_0` ... `praise_11`
    - mascot `mascot_<n>`
    - gear `gear_<n>`
    - stars `stars_0` … `stars_3`

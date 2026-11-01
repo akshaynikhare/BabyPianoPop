@@ -130,6 +130,7 @@ func _on_tier_chosen(_tier: String) -> void:
 
 func _mascot_tap() -> void:
 	AudioDirector.play_sfx(&"giggle")
+	AudioDirector.play_sfx(&"boing")
 	_mascot.set_mood(&"celebrate", 1200)
 	AudioDirector.play_voice(StringName("mascot_%d" % (_mascot_taps % GameContent.MASCOT_PHRASE_COUNT)))
 	_mascot_taps += 1
@@ -141,5 +142,6 @@ func _on_play() -> void:
 	if _started:
 		return
 	_started = true
+	AudioDirector.play_sfx(&"ui_tap")
 	_mascot.set_mood(&"happy", 1500)
 	play_pressed.emit()

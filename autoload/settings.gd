@@ -7,6 +7,7 @@ const DEFAULTS := {
 	&"age_tier": "1-2y",
 	&"praise_mode": true,
 	&"music_on": true,
+	&"quiet_mode": false,
 }
 
 var _config := ConfigFile.new()

@@ -1,0 +1,84 @@
+id,text
+letter_a,A!
+letter_b,B!
+letter_c,C!
+letter_d,D!
+letter_e,E!
+letter_f,Eff!
+letter_g,G!
+letter_h,H!
+letter_i,I!
+letter_j,J!
+letter_k,K!
+letter_l,L!
+letter_m,M!
+letter_n,N!
+letter_o,O!
+letter_p,P!
+letter_q,Q!
+letter_r,R!
+letter_s,Ess!
+letter_t,T!
+letter_u,U!
+letter_v,V!
+letter_w,W!
+letter_x,X!
+letter_y,Y!
+letter_z,Z!
+number_0,Zero!
+number_1,One!
+number_2,Two!
+number_3,Three!
+number_4,Four!
+number_5,Five!
+number_6,Six!
+number_7,Seven!
+number_8,Eight!
+number_9,Nine!
+shape_star,Star!
+shape_heart,Heart!
+shape_circle,Circle!
+shape_triangle,Triangle!
+shape_square,Square!
+tier_6_12m,Six to twelve months!
+tier_1_2y,One to two years!
+tier_2_3y,Two to three years!
+praise_0,You're doing great!
+praise_1,Super star!
+praise_2,Keep going!
+praise_3,Wonderful job!
+praise_4,You did it!
+praise_5,So smart!
+praise_6,Amazing!
+praise_7,Hooray for you!
+praise_8,Great popping!
+praise_9,"Yay, you did it!"
+praise_10,Look at you go!
+praise_11,High five!
+three_stars_praise_0,Three stars! You're doing great!
+three_stars_praise_1,Three stars! Super star!
+three_stars_praise_2,Three stars! Keep going!
+three_stars_praise_3,Three stars! Wonderful job!
+three_stars_praise_4,Three stars! You did it!
+three_stars_praise_5,Three stars! So smart!
+three_stars_hooray,Three stars! Hooray!
+mascot_0,Peekaboo!
+mascot_1,Yay! Hello baby!
+mascot_2,Giggle giggle!
+mascot_3,Wheee!
+mascot_4,I see you!
+mascot_5,Peekaboo! Big smile!
+gear_0,Click!
+gear_1,Beep beep!
+gear_2,Twirl!
+gear_3,Tick tock!
+stars_0,Tap candies to earn three stars!
+stars_1,One star! Get two more!
+stars_2,Two stars! One more to go!
+stars_3,Three stars! Super job!
+three_stars_praise_6,Three stars! Amazing!
+three_stars_praise_7,Three stars! Hooray for you!
+three_stars_praise_8,Three stars! Great popping!
+three_stars_praise_9,"Three stars! Yay, you did it!"
+three_stars_praise_10,Three stars! Look at you go!
+three_stars_praise_11,Three stars! High five!

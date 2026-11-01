@@ -9,6 +9,9 @@ const GATE_MS := 3000.0
 const GATE_TAP_MIN_MS := 40.0
 const GATE_TAP_MAX_MS := 1200.0
 const GATE_RING_AFTER_MS := 150.0
+## The jingle follows the star chime; the praise waits for the tile's own word to finish.
+const CELEBRATE_DELAY := 0.2
+const PRAISE_GAP := 0.15
 
 var fx: BurstPool
 var rules: TileRules
@@ -26,6 +29,7 @@ var _praise_index := 0
 var _reset_token := 0
 var _gate_touch := -1
 var _gate_start := 0.0
+var _hold_sounding := false
 
 
 class _Board extends Node2D:
@@ -193,8 +197,12 @@ func _touch_up(index: int, canceled := false) -> void:
 func _update_gate() -> void:
 	var held := Time.get_ticks_msec() - _gate_start
 	header.gear.progress = 0.0 if held < GATE_RING_AFTER_MS else minf(held / GATE_MS, 1.0)
+	if held >= GATE_RING_AFTER_MS and not _hold_sounding:
+		_hold_sounding = true
+		AudioDirector.play_sfx(&"ui_hold")
 	if held >= GATE_MS:
 		_cancel_gate()
+		AudioDirector.play_sfx(&"ui_unlock")
 		Haptics.play(&"unlock")
 		fx.burst(&"unlock", _frac(0.8, 0.12))
 		settings_requested.emit()
@@ -203,6 +211,9 @@ func _update_gate() -> void:
 func _cancel_gate() -> void:
 	_gate_touch = -1
 	header.gear.progress = 0.0
+	if _hold_sounding:
+		_hold_sounding = false
+		AudioDirector.stop_sfx(&"ui_hold")
 
 
 func _check_point(pos: Vector2, moving: bool) -> void:
@@ -225,8 +236,9 @@ func _pop(tile: TileRules.Tile) -> void:
 		return
 	_reset_token += 1
 
+	var spoken := GameContent.voice_id(content)
 	AudioDirector.play_sfx(&"pop")
-	AudioDirector.play_voice(GameContent.voice_id(content))
+	AudioDirector.play_voice(spoken)
 	Haptics.play(&"pop")
 	if node != null:
 		node.play_pop()
@@ -234,17 +246,18 @@ func _pop(tile: TileRules.Tile) -> void:
 
 	header.pill.set_stars(rules.star_count)
 	if rules.pop_three_stars:
-		_celebrate_three_stars()
+		_celebrate_three_stars(spoken)
 	else:
 		header.mascot.set_mood(&"happy", 900)
 	EventBus.tile_popped.emit(content, rules.pop_was_stuck)
 	EventBus.stars_changed.emit(rules.star_count)
 
 
-func _celebrate_three_stars() -> void:
+func _celebrate_three_stars(spoken: StringName) -> void:
 	EventBus.round_completed.emit(rules.completed_rounds)
 	header.mascot.set_mood(&"celebrate", 2400)
 	AudioDirector.play_sfx(&"star")
+	get_tree().create_timer(CELEBRATE_DELAY, false).timeout.connect(AudioDirector.play_sfx.bind(&"celebrate"))
 	Haptics.play(&"stars")
 	fx.burst(&"stars", _frac(0.5, 0.12))
 
@@ -253,10 +266,15 @@ func _celebrate_three_stars() -> void:
 	if praise:
 		clip = StringName("three_stars_praise_%d" % (_praise_index % GameContent.PRAISE_COUNT))
 		_praise_index += 1
-	get_tree().create_timer(0.28, false).timeout.connect(AudioDirector.play_voice.bind(clip))
-
 	var token := _reset_token
+	get_tree().create_timer(AudioDirector.voice_length(spoken) + PRAISE_GAP, false).timeout.connect(_say_praise.bind(clip, token))
 	get_tree().create_timer(1.8, false).timeout.connect(_reset_stars.bind(token))
+
+
+## Skipped when another tile was popped meanwhile, so a late praise never cuts a newer word.
+func _say_praise(clip: StringName, token: int) -> void:
+	if token == _reset_token:
+		AudioDirector.play_voice(clip)
 
 
 func _reset_stars(token: int) -> void:
@@ -269,6 +287,7 @@ func _reset_stars(token: int) -> void:
 
 func _mascot_tap() -> void:
 	AudioDirector.play_sfx(&"giggle")
+	AudioDirector.play_sfx(&"boing")
 	header.mascot.set_mood(&"celebrate", 1200)
 	AudioDirector.play_voice(StringName("mascot_%d" % (_mascot_taps % GameContent.MASCOT_PHRASE_COUNT)))
 	_mascot_taps += 1
